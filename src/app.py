@@ -30,7 +30,7 @@ def main() -> None:
     fig.add_trace(go.Scatter(y=tr[col], name="Observed", line=dict(color="#7eb6ff")))
     fig.add_trace(go.Scatter(y=tr["trend"], name="Trend", line=dict(color="#e0b15a")))
     fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#e7ecf3", height=360, title="Series and linear trend")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     if st.button("Run engine benchmark"):
         out = ROOT / "data" / "bench.csv"
         result = benchmark_engines(df, out)
