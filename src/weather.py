@@ -96,6 +96,7 @@ def normalize_observations(df: pd.DataFrame) -> pd.DataFrame:
     if len(df) > MAX_UPLOAD_ROWS:
         raise ValueError("Input must contain 100000 rows or fewer")
 
+    df = df.reset_index(drop=True)
     mapped: dict[str, pd.Series] = {}
     for column in df.columns:
         key = re.sub(r"[^a-z0-9]+", "_", str(column).strip().casefold()).strip("_")
