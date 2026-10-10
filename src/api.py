@@ -94,6 +94,16 @@ def api_health() -> dict[str, str]:
     return {"status": "ok", "service": "national-weather-analytics"}
 
 
+
+@app.get("/api/template.csv")
+def api_template_csv(rows: int = Query(default=48, ge=5, le=5000)) -> Response:
+    frame = generate_sample(n=rows, seed=11)
+    return Response(
+        content=frame.to_csv(index=False),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="weather-stations-template.csv"'},
+    )
+
 @app.get("/api/sample")
 def api_sample(rows: int = Query(default=1200, ge=1, le=5000)) -> dict[str, Any]:
     frame = generate_sample(n=rows, seed=3)
