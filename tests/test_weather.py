@@ -99,12 +99,12 @@ def test_anomalies_detect_spike_and_ignore_constant_series(tmp_path) -> None:
     frame = pd.DataFrame({
         "station": ["A"] * 6,
         "ts": pd.date_range("2025-01-01", periods=6, freq="h").astype(str),
-        "temp_c": [10, 11, 9, 10, 10, 100],
+        "temp_c": [10, 11, 9, 10, 10, 59],
     })
     ingest(frame, db)
     result = anomalies(db, z=2)
     assert len(result) == 1
-    assert result.iloc[0]["temp_c"] == 100
+    assert result.iloc[0]["temp_c"] == 59
     constant_db = tmp_path / "constant.db"
     ingest(frame.assign(temp_c=15), constant_db)
     assert anomalies(constant_db).empty
