@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+from html import escape
 import tempfile
 from pathlib import Path
 
@@ -129,7 +130,7 @@ def main() -> None:
                 raw = load_weather_csv(upload.getvalue())
                 rows_read = len(raw)
                 frame = normalize_observations(raw)
-                source_label = f"Uploaded CSV · {upload.name}"
+                source_label = f"Uploaded CSV · {escape(upload.name)}"
                 if frame.empty:
                     st.error("No valid observations remain. Check station, timestamp, and temperature values.")
                     st.stop()
@@ -197,7 +198,6 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    metric_values = pd.to_numeric(filtered[metric], errors="coerce").dropna()
     anomaly_count = int(tr["is_anomaly"].sum())
     precipitation_total = pd.to_numeric(filtered["precip_mm"], errors="coerce").sum(min_count=1)
     c1, c2, c3, c4 = st.columns(4)
