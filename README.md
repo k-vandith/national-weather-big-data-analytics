@@ -1,186 +1,50 @@
-# National Weather Big Data Analytics Platform
+# National Weather Big Data Analytics
 
-ETL and analytics layer for national-scale weather observations: ingest, aggregate, and visualise temperature, precipitation, and anomaly indicators.
+A local Streamlit workspace for cleaning station observations, reviewing climatology, summarizing station networks, and flagging descriptive trend deviations.
 
-## Problem Statement
-
-Agencies and researchers need a reproducible pipeline to clean multi-station weather CSVs, compute regional aggregates, and serve dashboards or APIs without proprietary stacks.
-
-## Overview
-
-Load station time series, run cleaning and aggregation, expose Streamlit dashboards and an optional FastAPI surface for programmatic access.
-
-## Features
-
-- **CSV / batch ingest**
-- **Cleaning & aggregation** – daily / regional rollups
-- **Anomaly highlights**
-- **Streamlit analytics UI**
-- **Optional FastAPI endpoints**
-- **Demo national-scale synthetic set**
-
-## Architecture
-
-```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│  Streamlit  │────▶│   Weather    │────▶│  Aggregates │
-│  + FastAPI  │     │   pipeline   │     │  + plots    │
-└─────────────┘     └──────┬───────┘     └─────────────┘
-                           │
-                    ┌──────▼───────┐
-                    │  Station CSV │
-                    └──────────────┘
-```
-
-## Tech Stack
-
-- Python 3.11+
-- Pandas / NumPy
-- Streamlit + Plotly
-- FastAPI + Uvicorn
-- pytest
-
-## Repository Structure
-
-```
-national-weather-big-data-analytics/
-├── README.md
-├── requirements.txt
-├── src/
-│   └── weather.py
-├── tests/
-│   └── test_weather.py
-├── data/
-├── scripts/
-│   ├── setup_env.py
-│   ├── setup.sh
-│   ├── setup.ps1
-│   └── generate_demo_data.py
-└── docs/
-```
-
-## System Requirements
-
-| Mode | CPU | RAM | Disk | GPU |
-|------|-----|-----|------|-----|
-| Demo | Any | 2 GB | 1 GB | Not needed |
-
-## Installation
-
-### Recommended (all platforms) — automated bootstrap
-
-Handles missing `ensurepip`, symlink restrictions, and installs dependencies into `.venv`:
+## Run locally
 
 ```bash
-git clone https://github.com/k-vandith/national-weather-big-data-analytics.git
-cd national-weather-big-data-analytics
-python3 scripts/setup_env.py    # or:  python scripts/setup_env.py
+python -m pip install -r requirements.txt
+streamlit run src/app.py
+# Or: python run.py
 ```
 
-Then activate:
+## Data sources
 
-```bash
-# Linux / macOS
-source .venv/bin/activate
+- **Synthetic station network:** deterministic, fictional observations; works offline.
+- **CSV upload:** required fields are station, timestamp/date, and temperature in °C. Common aliases such as `station_id`, `datetime`, `temperature_c`, `rainfall_mm`, and `wind_speed_ms` are supported. Humidity, pressure, wind, and precipitation are optional.
+- Uploads are limited to 10 MB and 100,000 rows. Invalid required records are excluded, optional out-of-range values become missing, and duplicate station/timestamp pairs keep the last record.
+- Export the cleaned observations and a JSON analytics report from the dashboard.
 
-# Windows PowerShell
-.venv\Scripts\Activate.ps1
-```
-
-### Manual setup
-
-#### Windows (PowerShell)
-
-```powershell
-git clone https://github.com/k-vandith/national-weather-big-data-analytics.git
-cd national-weather-big-data-analytics
-python -m venv .venv --copies
-.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-#### Linux / macOS
-
-```bash
-git clone https://github.com/k-vandith/national-weather-big-data-analytics.git
-cd national-weather-big-data-analytics
-# If venv fails with ensurepip errors:
-#   sudo apt install python3-venv python3-pip
-python3 -m venv .venv --copies
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-### Why `--copies`?
-
-Some environments cannot create symlinks inside a venv (`Operation not permitted` on `lib64 → lib`). Using `--copies` avoids that. `scripts/setup_env.py` tries `--copies` first automatically.
-
-## Environment Variables
-
-Optional FastAPI host/port via environment if extended.
-
-## Dataset / Demo Mode
+Generate a local CSV and SQLite database:
 
 ```bash
 python scripts/generate_demo_data.py
 ```
 
-## Running the Application
-
-```bash
-streamlit run src/weather.py
-# Optional API:
-uvicorn src.weather:app --reload   # if FastAPI app exposed
-```
-
-## API Usage
+## CSV pipeline and API
 
 ```python
 from src.weather import run_pipeline
-print(run_pipeline("data/demo_stations.csv"))
+report = run_pipeline("data/sample/weather.csv", db_path="data/sample/analytics.db")
+print(report)
 ```
 
-## Testing
+Run the optional API with `uvicorn src.api:app --reload`. It exposes `GET /health`, `GET /climatology/demo`, and `POST /analytics/summary` with an `observations` JSON array (up to 10,000 records).
+
+## Checks
 
 ```bash
+python -m pip install -r requirements-dev.txt
 pytest -v
+ruff check src run.py tests
 ```
-
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| `ModuleNotFoundError: src` | Run from project root; ensure `PYTHONPATH=.` |
-| `venv` / ensurepip fails | Run `python3 scripts/setup_env.py` or install `python3-venv` |
-| `Operation not permitted` on lib64 | Use `python3 -m venv .venv --copies` |
-| Missing dependency | Activate `.venv` and re-run `pip install -r requirements.txt` |
 
 ## Limitations
 
-- Demo scale is synthetic; production needs real station feeds.
-- Spatial joins / GIS layers are minimal in the base release.
-- Not a numerical weather prediction model.
-
-## Security / Privacy
-
-- Weather observations are generally non-sensitive; still protect API keys if you add external feeds.
-
-## Future Improvements
-
-- Parquet / DuckDB backend for larger archives
-- Map overlays
-- Scheduled ETL jobs
+The bundled data is synthetic. Trend anomalies are descriptive, not forecasts; benchmark timings depend on the local sample and installed engines. Validate against trusted station feeds and domain expertise before operational use.
 
 ## License
 
 MIT
-
-## Interface
-
-```bash
-python run.py
-```
-
-Opens the local Streamlit workspace on port 8501. Demo paths work without GPU, webcam, or a paid API. `streamlit run src/app.py` is equivalent.
