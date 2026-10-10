@@ -1,26 +1,36 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+import asyncio
+from typing import Any
+
+import httpx
 
 from src.api import app
 
 
-client = TestClient(app)
+def request(method: str, path: str, payload: dict[str, Any] | None = None) -> httpx.Response:
+    async def send() -> httpx.Response:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            return await client.request(method, path, json=payload)
+
+    return asyncio.run(send())
 
 
 def test_health_and_climatology_api() -> None:
-    health = client.get("/health")
+    health = request("GET", "/health")
     assert health.status_code == 200
     assert health.json() == {"status": "ok"}
-    summary = client.get("/climatology/demo")
+    summary = request("GET", "/climatology/demo")
     assert summary.status_code == 200
     assert summary.json()["count"] == 365
 
 
 def test_analytics_summary_accepts_station_json() -> None:
-    response = client.post(
+    response = request(
+        "POST",
         "/analytics/summary",
-        json={
+        {
             "observations": [
                 {"station": "STN-A", "ts": "2025-01-01T00:00:00Z", "temp_c": 18.0, "precip_mm": 1.2},
                 {"station": "STN-A", "ts": "2025-01-01T01:00:00Z", "temp_c": 20.0, "precip_mm": 0.0},
@@ -37,5 +47,5 @@ def test_analytics_summary_accepts_station_json() -> None:
 
 
 def test_analytics_summary_rejects_empty_or_invalid_payloads() -> None:
-    assert client.post("/analytics/summary", json={"observations": []}).status_code == 422
-    assert client.post("/analytics/summary", json={"observations": [{"station": "A", "temp_c": 20}]}).status_code == 422
+    assert request("POST", "/analytics/summary", {"observations": []}).status_code == 422
+    assert request("POST", "/analytics/summary", {"observations": [{"station": "A", "temp_c": 20}]}).status_code == 422
