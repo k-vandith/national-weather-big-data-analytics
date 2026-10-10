@@ -137,6 +137,8 @@ function setDataset(payload) {
   byId("dataset-subtitle").textContent = state.source === "uploaded-csv"
     ? `${pretty(state.rowsRemoved, 0)} rows excluded during cleaning · local processing only`
     : "Reproducible synthetic observations · no live weather feed";
+  byId("import-source-title").textContent = state.sourceLabel;
+  byId("import-source-meta").textContent = `${pretty(state.rows.length, 0)} valid rows · ${pretty(state.rowsRemoved, 0)} excluded during cleaning · ${new Set(state.rows.map((row) => row.station)).size} station(s)`;
   renderDashboard();
   setBusy(false);
 }
@@ -349,12 +351,11 @@ function renderAnomalies(points, metric) {
   byId("anomaly-table").innerHTML = found.length ? found.slice(0, 10).map((point) => `<tr>
     <td>${escapeHTML(point.date)}</td><td class="value-accent">${pretty(point.value, 2)} ${escapeHTML(unit)}</td>
     <td>${pretty(point.trend, 2)} ${escapeHTML(unit)}</td><td>${pretty(point.zscore, 2)}σ</td>
-  </tr>`).join("") : '<tr><td colspan="4">No daily point crosses the configured residual threshold.</td></tr>';
+  </tr>`).join("") : '<tr class="empty-review-row"><td colspan="4"><div class="quality-empty"><span class="quality-empty-icon" aria-hidden="true">✓</span><div><strong>No deviations</strong><p>No daily point crosses the configured residual threshold.</p></div></div></td></tr>';
   byId("anomaly-table-foot").textContent = found.length > 10
     ? `Showing 10 of ${found.length} daily deviations`
     : `${found.length} daily deviation(s) · this is not a forecast alert`;
 }
-
 function renderDashboard() {
   if (!state.rows.length) return;
   const rows = selectedRows();
@@ -483,6 +484,50 @@ async function saveDatabase() {
   }
 }
 
+
+const PAGE_CONFIG = {
+  "/": { key: "overview", title: "Weather overview", description: "Summary of the active weather analytics dataset." },
+  "/import": { key: "import", title: "Import data", description: "Generate demo observations or validate and analyze an uploaded station CSV." },
+  "/network": { key: "network", title: "Station network", description: "Compare station coverage and inspect recent readings." },
+  "/quality": { key: "quality", title: "Quality review", description: "Review descriptive daily residuals against a simple linear trend." },
+  "/archive": { key: "archive", title: "Local archive", description: "Save, inspect, and export observations from the project-local SQLite archive." },
+};
+
+function activatePage() {
+  const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+  const page = PAGE_CONFIG[pathname] || PAGE_CONFIG["/"];
+  document.body.dataset.page = page.key;
+  document.querySelectorAll("[data-view]").forEach((view) => {
+    view.hidden = view.dataset.view !== page.key;
+  });
+  document.querySelectorAll("[data-page-link]").forEach((link) => {
+    const active = link.dataset.pageLink === page.key;
+    link.classList.toggle("active", active);
+    if (active) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+  byId("page-title").textContent = page.title;
+  byId("page-description").textContent = page.description;
+  document.title = `${page.title} | Weather Atlas`;
+}
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest("a[data-route-link]");
+  if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const destination = new URL(link.href, window.location.href);
+  if (destination.origin !== window.location.origin || !Object.prototype.hasOwnProperty.call(PAGE_CONFIG, destination.pathname)) return;
+  event.preventDefault();
+  if (destination.pathname !== window.location.pathname) history.pushState({}, "", destination.pathname);
+  activatePage();
+  renderDashboard();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+window.addEventListener("popstate", () => {
+  activatePage();
+  renderDashboard();
+});
+
 async function boot() {
   byId("demo-rows-out").textContent = Number(byId("demo-rows").value).toLocaleString();
   byId("sigma-out").textContent = `${Number(byId("sigma-select").value).toFixed(2)}σ`;
@@ -547,4 +592,5 @@ drop.addEventListener("drop", (event) => {
   analyzeCSV();
 });
 
+activatePage();
 boot();
