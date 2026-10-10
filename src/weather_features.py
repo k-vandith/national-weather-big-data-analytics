@@ -106,9 +106,8 @@ def benchmark_engines(df: pd.DataFrame, path: str | Path) -> dict[str, float | s
     try:
         import duckdb
 
-        safe_path = str(csv_path.resolve()).replace("'", "''")
         start = time.perf_counter()
-        duckdb.execute(f"SELECT * FROM read_csv_auto('{safe_path}') LIMIT 100").df()
+        duckdb.execute("SELECT * FROM read_csv_auto(?) LIMIT 100", [str(csv_path.resolve())]).df()
         results["duckdb_s"] = round(time.perf_counter() - start, 6)
     except (ImportError, Exception) as exc:
         results["duckdb_s"] = -1.0
