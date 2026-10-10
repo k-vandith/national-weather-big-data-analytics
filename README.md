@@ -1,49 +1,205 @@
 # National Weather Big Data Analytics
 
-A local Streamlit workspace for cleaning station observations, reviewing climatology, summarizing station networks, and flagging descriptive trend deviations.
+A local-first station-weather analytics workspace built with **HTML, CSS, JavaScript, Python, FastAPI, Pandas, NumPy, and SQLite**. Import station CSVs, inspect temperature and precipitation summaries, review daily trend deviations, export cleaned data, and optionally persist observations in a local SQLite archive.
 
-## Run locally
+> **Important:** the built-in dataset is synthetic. This project performs descriptive analytics; it is not a numerical weather-prediction model and does not issue official weather alerts.
 
-```bash
+## Features
+
+- **Static web UI:** plain HTML, CSS, and vanilla JavaScript. No Streamlit, Plotly, CDN, external fonts, or browser chart library required.
+- **Offline demo:** repeatable hourly sample observations for three demo stations.
+- **CSV import and validation:** common station/weather column aliases, timestamp parsing, plausible temperature bounds, optional measurement validation, duplicate station/timestamp handling, 10 MB upload limit, and a 100,000-row limit.
+- **Climatology summaries:** mean, minimum, maximum, 95th percentile, and recorded precipitation.
+- **Visual trend review:** a native SVG chart draws daily values and a linear trend. Trend deviations are descriptive residuals, not forecasts.
+- **Station network:** per-station observation counts, mean temperature, and total precipitation.
+- **Exports:** cleaned CSV and a JSON analytics report.
+- **Local persistence:** explicitly save the current dataset to SQLite, using station/timestamp upserts so repeat saves do not create duplicate observations.
+- **JSON API:** health, sample data, CSV analysis, database summary, and database export endpoints.
+
+## Quick start
+
+Requirements: Python 3.11 or newer.
+
+### Windows PowerShell
+
+```powershell
+git clone https://github.com/k-vandith/national-weather-big-data-analytics.git
+cd national-weather-big-data-analytics
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-streamlit run src/app.py
-# Or: python run.py
+python run.py
 ```
 
-## Data sources
+### macOS / Linux
 
-- **Synthetic station network:** deterministic, fictional observations; works offline.
-- **CSV upload:** required fields are station, timestamp/date, and temperature in °C. Common aliases such as `station_id`, `datetime`, `temperature_c`, `rainfall_mm`, and `wind_speed_ms` are supported. Humidity, pressure, wind, and precipitation are optional.
-- Uploads are limited to 10 MB and 100,000 rows. Invalid required records are excluded, optional out-of-range values become missing, and duplicate station/timestamp pairs keep the last record.
-- Export the cleaned observations and a JSON analytics report from the dashboard.
+```bash
+git clone https://github.com/k-vandith/national-weather-big-data-analytics.git
+cd national-weather-big-data-analytics
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python run.py
+```
 
-Generate a local CSV and SQLite database:
+Open **http://127.0.0.1:8501**. The default server binds to loopback, so it is intended for use on the local machine.
+
+To choose a different port:
+
+```bash
+python run.py --port 8502
+```
+
+Run Uvicorn directly if preferred:
+
+```bash
+python -m uvicorn src.api:app --host 127.0.0.1 --port 8501 --reload
+```
+
+Interactive API documentation is available at **http://127.0.0.1:8501/docs** and the OpenAPI schema at **http://127.0.0.1:8501/openapi.json**.
+
+## Using the dashboard
+
+1. The page loads a reproducible synthetic station network by default. Adjust **Demo observations** and choose **Load demo dataset** to create another sample size.
+2. Choose a station and an observation metric to update the KPI cards, chart, station rollup, recent-record view, and trend-deviation review.
+3. Select **Import station CSV**, choose a file, and select **Analyze CSV**. The app reports excluded rows and then uses the cleaned records for the dashboard.
+4. Use **Export report** to download the current view's JSON summary or **CSV** to download cleaned observations.
+5. Use **Save current dataset** to upsert the current observations into the local SQLite archive. **Refresh archive** checks stored counts, and **Download archive CSV** exports all saved rows.
+
+The downloadable CSV template uses the canonical column names. Uploads are not sent to an external weather service.
+
+## CSV format and cleaning
+
+Required columns:
+
+| Canonical field | Accepted aliases | Meaning |
+| --- | --- | --- |
+| `station` | `station_id`, `site_id`, `station_code`, `site` | Station identifier |
+| `ts` | `timestamp`, `date`, `datetime`, `time`, `observation_time`, `valid_time` | Observation timestamp |
+| `temp_c` | `temperature_c`, `temperature`, `air_temp_c`, `temperature_2m` | Temperature in Celsius |
+
+Optional fields:
+
+| Canonical field | Accepted aliases | Expected range |
+| --- | --- | --- |
+| `humidity` | `humidity_pct`, `relative_humidity`, `relative_humidity_pct` | 0–100% |
+| `pressure_hpa` | `pressure`, `station_pressure_hpa`, `sea_level_pressure_hpa` | 500–1200 hPa |
+| `wind_ms` | `wind_speed`, `wind_speed_ms`, `wind_speed_m_s` | 0–150 m/s |
+| `precip_mm` | `precipitation_mm`, `rainfall_mm`, `precipitation`, `rain_mm` | 0–2000 mm |
+
+Column names are normalized case-insensitively. Rows without a usable station, timestamp, or temperature in **−90°C to 60°C** are excluded. Invalid optional measurements become missing values. Duplicate station/timestamp pairs retain the last occurrence. A CSV may contain up to **100,000 rows** and **10 MB**; analysis requires at least one valid observation after cleaning.
+
+## HTTP API
+
+All routes use the same local origin as the web interface. CSV endpoints accept the raw CSV in the request body with `Content-Type: text/csv`.
+
+| Method and route | Purpose |
+| --- | --- |
+| `GET /` | Serve the dashboard HTML |
+| `GET /styles.css` | Serve local styles |
+| `GET /app.js` | Serve the browser application |
+| `GET /api/health` | Health check for the frontend |
+| `GET /api/sample?rows=1200` | Generate sample observations as JSON (1–5,000 rows) |
+| `GET /api/template.csv?rows=48` | Download a sample CSV (5–5,000 rows) |
+| `POST /api/analyze/csv` | Validate and analyze a CSV without saving it |
+| `POST /api/ingest/csv` | Validate and upsert CSV observations into the project-local database |
+| `GET /api/stored/summary` | Return stored row/station counts and station aggregates |
+| `GET /api/stored.csv` | Download all database observations as CSV |
+| `GET /health` | Compatibility health route |
+| `GET /climatology/demo` | Compatibility synthetic climatology endpoint |
+| `POST /analytics/summary` | Compatibility JSON endpoint; body contains an `observations` array of up to 10,000 objects |
+
+Example: analyze a CSV using curl (replace the file path as needed):
+
+```bash
+curl -X POST "http://127.0.0.1:8501/api/analyze/csv" \
+  -H "Content-Type: text/csv" \
+  --data-binary "@weather-stations.csv"
+```
+
+Example JSON request to the compatibility summary endpoint:
+
+```bash
+curl -X POST "http://127.0.0.1:8501/analytics/summary" \
+  -H "Content-Type: application/json" \
+  -d '{"observations":[{"station":"STN-A","ts":"2025-01-01T00:00:00Z","temp_c":18,"precip_mm":1.2}]}'
+```
+
+CSV analysis returns `ok`, source, input/cleaned row counts, a summary object, and normalized `observations`. Invalid CSV and missing required fields return HTTP 422; uploads above 10 MB return HTTP 413.
+
+## Python pipeline and SQLite
+
+Generate the sample CSV and a SQLite database:
 
 ```bash
 python scripts/generate_demo_data.py
 ```
 
-## CSV pipeline and API
+Process a CSV programmatically and optionally persist it:
 
 ```python
 from src.weather import run_pipeline
-report = run_pipeline("data/sample/weather.csv", db_path="data/sample/analytics.db")
-print(report)
+
+report = run_pipeline(
+    "data/sample/weather.csv",
+    db_path="data/sample/analytics.db",
+)
+print(report["observations"], report["station_count"])
+print(report["temperature_c"])
 ```
 
-Run the optional API with `uvicorn src.api:app --reload`. It exposes `GET /health`, `GET /climatology/demo`, and `POST /analytics/summary` with an `observations` JSON array (up to 10,000 records).
+The local web app stores data at `data/weather.db`. It only writes when **Save current dataset** is selected (or the ingestion endpoint is called). The database is a local working artifact and should be backed up or deleted according to your own data-retention needs.
 
-## Checks
+## Development and tests
+
+Install the development dependencies:
 
 ```bash
 python -m pip install -r requirements-dev.txt
-pytest -v
-ruff check src run.py tests
 ```
 
-## Limitations
+Run checks from the repository root:
 
-The bundled data is synthetic. Trend anomalies are descriptive, not forecasts; benchmark timings depend on the local sample and installed engines. Validate against trusted station feeds and domain expertise before operational use.
+```bash
+ruff check src run.py tests
+node --check web/app.js
+bandit -q -r src run.py -ll
+pip-audit -r requirements.txt --progress-spinner off
+pytest -v
+```
+
+The CI workflow runs linting, JavaScript syntax validation, Bandit, dependency auditing, and all tests.
+
+## Repository structure
+
+```
+web/
+  index.html       Dashboard markup
+  styles.css       Responsive visual system
+  app.js           Browser-side state, charting, import/export
+src/
+  api.py           FastAPI static and data routes
+  weather.py       CSV cleaning, SQLite, aggregation, baseline pipeline
+  weather_features.py
+                  Climatology, trend analysis, benchmarks, compatibility API
+scripts/
+  generate_demo_data.py
+tests/
+  test_weather.py
+  test_weather_features.py
+  test_weather_api.py
+  test_ui_smoke.py
+```
+
+## Limitations and responsible interpretation
+
+- Synthetic values are fictional and should not be presented as observed national weather.
+- Linear trend and residual-based anomaly flags are exploratory descriptive statistics. They do not identify the cause of an outlier or predict future conditions.
+- The project does not currently ingest a real-time meteorological feed or perform physical weather simulation.
+- Uploaded station metadata and measurements are only as reliable as their source. Validate units, calibration, station locations, timestamps, and quality-control rules before research or operational use.
+- The app is designed to bind locally by default. Do not expose an unauthenticated development server to the public internet.
 
 ## License
 

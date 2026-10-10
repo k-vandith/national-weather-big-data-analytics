@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cross-platform virtualenv bootstrap. Usage: python3 scripts/setup_env.py"""
+"""Cross-platform setup for the HTML/CSS/JS weather analytics app."""
 from __future__ import annotations
 import os, platform, shutil, subprocess, sys
 from pathlib import Path
@@ -60,7 +60,8 @@ def main():
     print("\n" + "=" * 60)
     print("Setup complete. Activate:")
     print(r"  .venv\Scripts\Activate.ps1" if IS_WIN else "  source .venv/bin/activate")
-    print("Then:  pytest -v")
+    print("Then:  python run.py")
+    print("For development checks: install requirements-dev.txt and run pytest -v")
     print("=" * 60)
 if __name__ == "__main__":
     main()
