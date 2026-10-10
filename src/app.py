@@ -17,8 +17,6 @@ import streamlit as st
 
 from src.ui_theme import theme_css
 from src.weather import (
-    MAX_UPLOAD_BYTES,
-    MAX_UPLOAD_ROWS,
     generate_sample,
     load_weather_csv,
     normalize_observations,
