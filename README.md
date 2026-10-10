@@ -1,12 +1,15 @@
 # National Weather Big Data Analytics
 
+![Weather Atlas logo](web/assets/weather-atlas-logo.svg)
+
 A local-first station-weather analytics workspace built with **HTML, CSS, JavaScript, Python, FastAPI, Pandas, NumPy, and SQLite**. Import station CSVs, inspect temperature and precipitation summaries, review daily trend deviations, export cleaned data, and optionally persist observations in a local SQLite archive.
 
 > **Important:** the built-in dataset is synthetic. This project performs descriptive analytics; it is not a numerical weather-prediction model and does not issue official weather alerts.
 
 ## Features
 
-- **Static web UI:** plain HTML, CSS, and vanilla JavaScript. No Streamlit, Plotly, CDN, external fonts, or browser chart library required.
+- **Task-focused web UI:** plain HTML, CSS, and vanilla JavaScript, split into dedicated Overview, Import, Station Network, Quality Review, and Local Archive pages. No Streamlit, Plotly, CDN, external fonts, or browser chart library required.
+- **Weather Atlas branding:** the responsive interface, favicon, and README use the same theme-matched SVG mark.
 - **Offline demo:** repeatable hourly sample observations for three demo stations.
 - **CSV import and validation:** common station/weather column aliases, timestamp parsing, plausible temperature bounds, optional measurement validation, duplicate station/timestamp handling, 10 MB upload limit, and a 100,000-row limit.
 - **Climatology summaries:** mean, minimum, maximum, 95th percentile, and recorded precipitation.
@@ -60,15 +63,27 @@ python -m uvicorn src.api:app --host 127.0.0.1 --port 8501 --reload
 
 Interactive API documentation is available at **http://127.0.0.1:8501/docs** and the OpenAPI schema at **http://127.0.0.1:8501/openapi.json**.
 
-## Using the dashboard
+## Workspace pages
 
-1. The page loads a reproducible synthetic station network by default. Adjust **Demo observations** and choose **Load demo dataset** to create another sample size.
-2. Choose a station and an observation metric to update the KPI cards, chart, station rollup, recent-record view, and trend-deviation review.
-3. Select **Import station CSV**, choose a file, and select **Analyze CSV**. The app reports excluded rows and then uses the cleaned records for the dashboard.
-4. Use **Export report** to download the current view's JSON summary or **CSV** to download cleaned observations.
-5. Use **Save current dataset** to upsert the current observations into the local SQLite archive. **Refresh archive** checks stored counts, and **Download archive CSV** exports all saved rows.
+The app has dedicated task pages so import controls, station tables, data-quality review, and persistence tools do not crowd the overview. Use the sidebar to switch pages; the local dataset remains in browser memory while moving between views.
 
-The downloadable CSV template uses the canonical column names. Uploads are not sent to an external weather service.
+| Page | Local route | What it is for |
+| --- | --- | --- |
+| Overview | `/` | Dataset coverage, key statistics, and the daily trend chart |
+| Import data | `/import` | Generate a synthetic sample, choose a CSV, validate/clean it, or download a template |
+| Station network | `/network` | Filter stations, compare the station rollup, and inspect recent observations |
+| Quality review | `/quality` | Adjust the residual threshold and inspect deviations from a fitted linear trend |
+| Local archive | `/archive` | Explicitly save the current dataset to SQLite, refresh archive stats, or export the archive |
+
+### Typical workflow
+
+1. Open **Import data** and load the demo observations, or select **Analyze CSV** to validate your own station data.
+2. Visit **Overview** for a summary of the active dataset. Choose a metric in the top bar to update the chart and derived summaries.
+3. Use **Station network** to focus on a station and compare readings, or **Quality review** to inspect residuals. A “No deviations” result means no daily point crossed the configured threshold; it is not a statement that all source data is error-free.
+4. Use **Export report** for a JSON summary or **CSV** for cleaned observations.
+5. To keep the observations on disk, visit **Local archive** and select **Save current dataset**. **Refresh archive** queries the stored totals, and **Download archive CSV** exports all saved records.
+
+The downloadable template uses canonical column names. Uploads are processed locally; they are not sent to an external weather service.
 
 ## CSV format and cleaning
 
@@ -100,6 +115,8 @@ All routes use the same local origin as the web interface. CSV endpoints accept 
 | `GET /` | Serve the dashboard HTML |
 | `GET /styles.css` | Serve local styles |
 | `GET /app.js` | Serve the browser application |
+| `GET /assets/weather-atlas-logo.svg` | Serve the Weather Atlas logo and favicon |
+| `GET /import`, `/network`, `/quality`, `/archive` | Serve direct-linkable task pages |
 | `GET /api/health` | Health check for the frontend |
 | `GET /api/sample?rows=1200` | Generate sample observations as JSON (1–5,000 rows) |
 | `GET /api/template.csv?rows=48` | Download a sample CSV (5–5,000 rows) |
@@ -178,7 +195,9 @@ The CI workflow runs linting, JavaScript syntax validation, Bandit, dependency a
 web/
   index.html       Dashboard markup
   styles.css       Responsive visual system
-  app.js           Browser-side state, charting, import/export
+  app.js           Browser-side state, page routing, charting, import/export
+  assets/
+    weather-atlas-logo.svg  Theme-matched logo and favicon
 src/
   api.py           FastAPI static and data routes
   weather.py       CSV cleaning, SQLite, aggregation, baseline pipeline
