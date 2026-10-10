@@ -41,13 +41,19 @@ def test_html_css_and_javascript_are_served_without_streamlit() -> None:
     html_response = request("GET", "/")
     css_response = request("GET", "/styles.css")
     js_response = request("GET", "/app.js")
+    logo_response = request("GET", "/assets/weather-atlas-logo.svg")
     assert html_response.status_code == 200
     assert 'id="csv-file"' in html_response.text
     assert 'href="/styles.css"' in html_response.text
     assert css_response.status_code == 200
     assert "--accent: #79e3d3" in css_response.text
     assert js_response.status_code == 200
+    assert logo_response.status_code == 200
+    assert "image/svg+xml" in logo_response.headers["content-type"]
+    assert "PAGE_CONFIG" in js_response.text
     assert "async function analyzeCSV()" in js_response.text
+    for route in ("/import", "/network", "/quality", "/archive"):
+        assert request("GET", route).status_code == 200
     assert "exportReport" in js_response.text
 
 

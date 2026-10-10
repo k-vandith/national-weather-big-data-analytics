@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Weather Atlas</title>
+  <desc id="desc">A teal hexagon containing a weather wave and horizon line.</desc>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#173e48"/>
+      <stop offset="1" stop-color="#102732"/>
+    </linearGradient>
+    <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a5fff0"/>
+      <stop offset="1" stop-color="#39c9b7"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="17" fill="url(#tile)" stroke="#28515a" stroke-width="1.5"/>
+  <path d="M32 9 51 20v24L32 55 13 44V20L32 9Z" fill="none" stroke="url(#stroke)" stroke-width="2.1" stroke-linejoin="round"/>
+  <path d="M18 34c5.7-.4 6.7-10.8 13.5-10.8 5.4 0 6.2 12.2 14.5 6.3" fill="none" stroke="#a5fff0" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M20 41h24" fill="none" stroke="#39c9b7" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="45.5" cy="21" r="2" fill="#a5fff0"/>
+</svg>

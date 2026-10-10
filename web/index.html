@@ -4,175 +4,247 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#08131b">
-  <meta name="description" content="Local-first national weather station analytics, CSV ingestion, climatology, and data-quality review.">
-  <title>Weather Atlas — National Analytics</title>
+  <meta name="description" content="Weather Atlas — local-first station analytics, data ingestion, trend-deviation review, and archive tools.">
+  <link rel="icon" type="image/svg+xml" href="/assets/weather-atlas-logo.svg">
+  <title>Weather overview | Weather Atlas</title>
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
-<body>
+<body data-page="overview">
   <div class="app-shell">
-    <aside class="sidebar" aria-label="Workspace controls">
-      <a class="brand" href="/" aria-label="Weather Atlas home">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 40 40" role="img"><path d="M20 4 34 12v16L20 36 6 28V12L20 4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 23c4-1 5-8 9-8s5 9 11 4M11 28h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        </span>
-        <span><strong>WEATHER ATLAS</strong><small>National data studio</small></span>
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a class="brand" href="/" data-route-link aria-label="Weather Atlas overview">
+        <img class="brand-logo" src="/assets/weather-atlas-logo.svg" alt="">
+        <span class="brand-copy"><strong>WEATHER ATLAS</strong><small>National data studio</small></span>
       </a>
 
       <div class="sidebar-label">WORKSPACE</div>
-      <nav class="side-nav" aria-label="Dashboard sections">
-        <a class="nav-item active" href="#overview"><span class="nav-glyph">▦</span>Overview</a>
-        <a class="nav-item" href="#station-network"><span class="nav-glyph">⌘</span>Station network</a>
-        <a class="nav-item" href="#quality-review"><span class="nav-glyph">⌁</span>Quality review</a>
-        <a class="nav-item" href="#local-database"><span class="nav-glyph">▤</span>Local database</a>
+      <nav class="side-nav" aria-label="Workspace pages">
+        <a class="nav-item active" href="/" data-page-link="overview" data-route-link aria-current="page"><span class="nav-glyph">⌂</span><span>Overview</span></a>
+        <a class="nav-item" href="/import" data-page-link="import" data-route-link><span class="nav-glyph">⇧</span><span>Import data</span></a>
+        <a class="nav-item" href="/network" data-page-link="network" data-route-link><span class="nav-glyph">⌘</span><span>Station network</span></a>
+        <a class="nav-item" href="/quality" data-page-link="quality" data-route-link><span class="nav-glyph">⌁</span><span>Quality review</span></a>
+        <a class="nav-item" href="/archive" data-page-link="archive" data-route-link><span class="nav-glyph">▤</span><span>Local archive</span></a>
       </nav>
 
-      <div class="sidebar-label">DATA SOURCE</div>
-      <section class="control-panel">
-        <div class="control-heading"><span class="pulse-dot"></span><span>Local workspace</span></div>
-        <p class="control-help">Start with reproducible demo observations or load your own station CSV.</p>
-        <button id="load-sample" class="button button-secondary button-full" type="button">Load demo dataset</button>
-        <div class="file-drop" id="file-drop">
-          <input id="csv-file" type="file" accept=".csv,text/csv" aria-label="Choose station CSV">
-          <span class="file-icon" aria-hidden="true">↑</span>
-          <strong>Import station CSV</strong>
-          <span class="file-help" id="file-name">Drop a file here or browse</span>
-          <button id="analyze-csv" class="button button-primary button-full" type="button" disabled>Analyze CSV</button>
-        </div>
-        <a class="text-link" href="/api/template.csv?rows=48" id="download-template">Download CSV template ↗</a>
-      </section>
-
-      <div class="sidebar-label">ANALYSIS CONTROLS</div>
-      <section class="control-panel controls">
-        <label for="demo-rows">Demo observations <output id="demo-rows-out">1,200</output></label>
-        <input id="demo-rows" type="range" min="200" max="5000" step="200" value="1200">
-        <label for="station-select">Station</label>
-        <select id="station-select"><option value="*">All stations</option></select>
-        <label for="metric-select">Observation metric</label>
-        <select id="metric-select">
-          <option value="temp_c">Air temperature · °C</option>
-          <option value="humidity">Relative humidity · %</option>
-          <option value="pressure_hpa">Pressure · hPa</option>
-          <option value="wind_ms">Wind speed · m/s</option>
-          <option value="precip_mm">Precipitation · mm</option>
-        </select>
-        <label for="sigma-select">Trend deviation threshold <output id="sigma-out">2.00σ</output></label>
-        <input id="sigma-select" type="range" min="1" max="4" step="0.25" value="2">
-      </section>
-
-      <div class="sidebar-foot">
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-status">
+        <div class="sidebar-label">CONNECTION</div>
         <span class="status-indicator"><span class="pulse-dot"></span><span id="api-status">Checking local API…</span></span>
-        <span class="foot-note">LOCAL-FIRST · NO EXTERNAL FONT OR CHART LIBRARY</span>
+        <p>All processing stays in this local workspace. Demo observations are synthetic.</p>
       </div>
+      <div class="sidebar-foot"><span class="foot-note">LOCAL-FIRST · NO EXTERNAL CHART LIBRARY</span></div>
     </aside>
 
     <main class="main-content">
       <header class="topbar">
-        <div class="breadcrumbs"><span>Analytics</span><span class="crumb-sep">/</span><strong>Weather overview</strong></div>
+        <div class="breadcrumbs"><span>Workspace</span><span class="crumb-sep">/</span><strong id="page-title">Weather overview</strong></div>
         <div class="topbar-right">
+          <label class="topbar-metric" for="metric-select"><span>Metric</span>
+            <select id="metric-select">
+              <option value="temp_c">Temperature · °C</option>
+              <option value="humidity">Humidity · %</option>
+              <option value="pressure_hpa">Pressure · hPa</option>
+              <option value="wind_ms">Wind speed · m/s</option>
+              <option value="precip_mm">Precipitation · mm</option>
+            </select>
+          </label>
           <span class="live-pill"><span class="pulse-dot"></span><span id="source-badge">Demo source</span></span>
           <button id="export-report-top" class="button button-outline" type="button">Export report <span aria-hidden="true">↓</span></button>
         </div>
       </header>
 
-      <section id="overview" class="page-intro">
-        <div class="intro-copy">
-          <div class="eyebrow"><span class="eyebrow-line"></span>ATMOSPHERIC INTELLIGENCE / 01</div>
-          <h1>See the shape<br><span>of the weather.</span></h1>
-          <p>Turn station-level observations into clear climatology signals, network comparisons, and practical data-quality checks.</p>
+      <p class="sr-only" id="page-description">Summary of the active weather analytics dataset.</p>
+
+      <section class="page-view" data-view="overview">
+        <section class="page-intro">
+          <div class="intro-copy">
+            <div class="eyebrow"><span class="eyebrow-line"></span>ATMOSPHERIC INTELLIGENCE / 01</div>
+            <h1>See the shape<br><span>of the weather.</span></h1>
+            <p>A focused overview of station observations, daily patterns, and the health of your current dataset.</p>
+          </div>
+          <div class="intro-orbit" aria-hidden="true">
+            <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div>
+            <div class="orbit-core"><span>WX</span></div>
+            <span class="orbit-label orbit-label-a">TEMP</span><span class="orbit-label orbit-label-b">RAIN</span><span class="orbit-label orbit-label-c">WIND</span>
+          </div>
+        </section>
+
+        <section class="dataset-banner" aria-live="polite">
+          <div class="dataset-origin"><span class="origin-icon">◈</span><div><strong id="dataset-title">Synthetic station network</strong><span id="dataset-subtitle">Loading reproducible observations…</span></div></div>
+          <div class="dataset-meta"><span><strong id="observations-count">—</strong> observations</span><span class="meta-divider"></span><span><strong id="stations-count">—</strong> stations</span><span class="meta-divider"></span><span id="period-label">—</span></div>
+        </section>
+
+        <section class="kpi-grid" aria-label="Key metrics">
+          <article class="kpi-card kpi-accent">
+            <div class="kpi-head"><span>MEAN OBSERVATION</span><span class="kpi-symbol">μ</span></div>
+            <div class="kpi-value" id="kpi-mean">—</div><div class="kpi-foot" id="kpi-mean-foot">Across selected records</div>
+            <div class="mini-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </article>
+          <article class="kpi-card">
+            <div class="kpi-head"><span>95TH PERCENTILE</span><span class="kpi-symbol">P95</span></div>
+            <div class="kpi-value" id="kpi-p95">—</div><div class="kpi-foot" id="kpi-range">Range —</div>
+            <div class="kpi-bottom-line"><span id="kpi-count">— valid values</span><span class="small-dot"></span></div>
+          </article>
+          <article class="kpi-card">
+            <div class="kpi-head"><span>TREND DEVIATIONS</span><span class="kpi-symbol warning-symbol">!</span></div>
+            <div class="kpi-value" id="kpi-anomalies">—</div><div class="kpi-foot">Daily points beyond threshold</div>
+            <div class="kpi-bottom-line"><span id="sigma-caption">2.00σ threshold</span><span class="small-dot warning-dot"></span></div>
+          </article>
+          <article class="kpi-card">
+            <div class="kpi-head"><span>RAINFALL RECORDED</span><span class="kpi-symbol rain-symbol">↘</span></div>
+            <div class="kpi-value" id="kpi-rain">—</div><div class="kpi-foot">Total reported precipitation</div>
+            <div class="kpi-bottom-line"><span>Selected dataset</span><span class="small-dot"></span></div>
+          </article>
+        </section>
+
+        <section class="content-grid overview-chart-grid">
+          <article class="panel chart-panel">
+            <div class="panel-heading">
+              <div><div class="section-kicker">TIME SERIES</div><h2 id="chart-title">Temperature trend</h2><p id="chart-subtitle">Daily values and fitted linear trend</p></div>
+              <span class="chart-legend"><i class="legend-observed"></i>Observed <i class="legend-trend"></i>Trend</span>
+            </div>
+            <div class="chart-canvas" id="chart-canvas" role="img" aria-label="Daily weather metric line chart"><div class="empty-state">Loading chart…</div></div>
+            <div class="chart-footer"><span id="chart-range">—</span><span>Up to 180 daily buckets</span></div>
+          </article>
+        </section>
+
+        <section class="quick-links-section" aria-labelledby="next-steps-title">
+          <div class="section-heading-row"><div><div class="section-kicker">WORKSPACE SHORTCUTS</div><h2 id="next-steps-title">Choose a task</h2></div><span class="section-caption">One workflow at a time</span></div>
+          <div class="quick-links-grid">
+            <a class="quick-link-card" href="/import" data-route-link><span class="quick-link-icon">⇧</span><span><strong>Import observations</strong><small>Load a demo or validate a station CSV.</small></span><span class="quick-link-arrow">↗</span></a>
+            <a class="quick-link-card" href="/network" data-route-link><span class="quick-link-icon">⌘</span><span><strong>Explore stations</strong><small>Compare station coverage and recent records.</small></span><span class="quick-link-arrow">↗</span></a>
+            <a class="quick-link-card" href="/quality" data-route-link><span class="quick-link-icon">⌁</span><span><strong>Review deviations</strong><small>Inspect residuals against a simple trend.</small></span><span class="quick-link-arrow">↗</span></a>
+            <a class="quick-link-card" href="/archive" data-route-link><span class="quick-link-icon">▤</span><span><strong>Manage archive</strong><small>Save or export local SQLite observations.</small></span><span class="quick-link-arrow">↗</span></a>
+          </div>
+        </section>
+      </section>
+
+      <section class="page-view" data-view="import" hidden>
+        <section class="page-intro compact-intro">
+          <div class="intro-copy">
+            <div class="eyebrow"><span class="eyebrow-line"></span>DATA INGESTION / 02</div>
+            <h1>Bring your<br><span>observations in.</span></h1>
+            <p>Load reproducible demo records or analyze your own CSV. Files are processed by the local API and are not sent to an external weather service.</p>
+          </div>
+        </section>
+
+        <section class="import-grid">
+          <article class="panel import-panel">
+            <div class="panel-heading"><div><div class="section-kicker">STARTER DATA</div><h2>Load a demo dataset</h2><p>Generate a repeatable sample to explore the tools.</p></div><span class="panel-index">01 / DEMO</span></div>
+            <label class="field-label" for="demo-rows">Demo observations <output id="demo-rows-out">1,200</output></label>
+            <input id="demo-rows" type="range" min="200" max="5000" step="200" value="1200">
+            <p class="field-help">Choose between 200 and 5,000 synthetic hourly records.</p>
+            <button id="load-sample" class="button button-primary" type="button">Load demo dataset <span aria-hidden="true">→</span></button>
+          </article>
+
+          <article class="panel import-panel">
+            <div class="panel-heading"><div><div class="section-kicker">YOUR DATA</div><h2>Analyze a station CSV</h2><p>Clean, validate, and summarize local observations.</p></div><span class="panel-index">02 / CSV</span></div>
+            <div class="file-drop" id="file-drop">
+              <input id="csv-file" type="file" accept=".csv,text/csv" aria-label="Choose station CSV">
+              <span class="file-icon" aria-hidden="true">↑</span>
+              <strong>Drop a CSV here or browse</strong>
+              <span class="file-help" id="file-name">No file selected</span>
+            </div>
+            <div class="import-actions">
+              <button id="analyze-csv" class="button button-primary" type="button" disabled>Analyze CSV</button>
+              <a class="button button-secondary" href="/api/template.csv?rows=48" id="download-template">Download template <span aria-hidden="true">↓</span></a>
+            </div>
+            <p class="field-help">Maximum 10 MB and 100,000 rows. Required fields: station, timestamp, and temperature in °C.</p>
+          </article>
+        </section>
+
+        <article class="panel import-status-panel">
+          <div class="status-large-icon">✓</div>
+          <div><div class="section-kicker">CURRENT DATASET</div><h2 id="import-source-title">Synthetic station network</h2><p id="import-source-meta">Loading current observation details…</p></div>
+          <a class="button button-outline" href="/" data-route-link>View overview <span aria-hidden="true">↗</span></a>
+        </article>
+      </section>
+
+      <section class="page-view" data-view="network" hidden>
+        <section class="page-intro compact-intro">
+          <div class="intro-copy">
+            <div class="eyebrow"><span class="eyebrow-line"></span>STATION EXPLORER / 03</div>
+            <h1>Read the<br><span>station network.</span></h1>
+            <p>Compare observation coverage and inspect the newest records for each station in the selected dataset.</p>
+          </div>
+        </section>
+
+        <section class="panel page-toolbar">
+          <div><div class="section-kicker">NETWORK FILTER</div><h2>Focus a station</h2><p>Changes update the table and the shared summary metrics.</p></div>
+          <label class="field-control" for="station-select">Station
+            <select id="station-select"><option value="*">All stations</option></select>
+          </label>
+        </section>
+
+        <section class="content-grid network-grid">
+          <article class="panel station-panel" id="station-network">
+            <div class="panel-heading"><div><div class="section-kicker">NETWORK DISTRIBUTION</div><h2>Station rollup</h2><p>Coverage, mean temperature, and total rainfall</p></div><span class="panel-index">01 / NET</span></div>
+            <div class="table-wrap"><table><thead><tr><th>STATION</th><th>MEAN °C</th><th>RAINFALL</th></tr></thead><tbody id="station-table"><tr><td colspan="3">Loading station rollup…</td></tr></tbody></table></div>
+            <div class="panel-foot"><span id="station-table-foot">—</span><span class="table-foot-mark">● NETWORK</span></div>
+          </article>
+
+          <article class="panel recent-panel">
+            <div class="panel-heading"><div><div class="section-kicker">LATEST RECORDS</div><h2>Recent observations</h2><p>Newest rows in the selected station view</p></div><button id="export-csv" class="icon-button" type="button" title="Export cleaned CSV" aria-label="Export cleaned CSV">↓ CSV</button></div>
+            <div class="table-wrap recent-table-wrap"><table><thead><tr><th>STATION / TIME</th><th>TEMP</th><th>RAIN</th></tr></thead><tbody id="recent-table"><tr><td colspan="3">Loading records…</td></tr></tbody></table></div>
+            <div class="panel-foot"><span id="recent-table-foot">—</span><span class="table-foot-mark">RECENT</span></div>
+          </article>
+        </section>
+      </section>
+
+      <section class="page-view" data-view="quality" hidden>
+        <section class="page-intro compact-intro">
+          <div class="intro-copy">
+            <div class="eyebrow"><span class="eyebrow-line"></span>DATA QUALITY / 04</div>
+            <h1>Review the<br><span>deviations.</span></h1>
+            <p>Large residuals from a simple linear trend. These are descriptive checks, not weather forecasts or official alerts.</p>
+          </div>
+        </section>
+
+        <section class="panel quality-settings">
+          <div><div class="section-kicker">REVIEW SENSITIVITY</div><h2>Residual threshold</h2><p>Increase the threshold to flag fewer daily points. The current metric is selected in the top bar.</p></div>
+          <label class="threshold-control" for="sigma-select"><span>Deviation threshold <output id="sigma-out">2.00σ</output></span><input id="sigma-select" type="range" min="1" max="4" step="0.25" value="2"></label>
+        </section>
+
+        <article class="panel anomaly-panel" id="quality-review">
+          <div class="panel-heading"><div><div class="section-kicker">TREND RESIDUALS</div><h2>Trend deviation review</h2><p>Observed daily values compared with a fitted straight-line trend.</p></div><span class="risk-chip" id="anomaly-chip">Ready to analyze</span></div>
+          <div class="quality-table-wrap table-wrap"><table><thead><tr><th>DATE</th><th>OBSERVED</th><th>TREND</th><th>RESIDUAL σ</th></tr></thead><tbody id="anomaly-table"><tr><td colspan="4">Loading quality review…</td></tr></tbody></table></div>
+          <div class="panel-foot"><span id="anomaly-table-foot">Threshold controlled above</span><span class="table-foot-mark">DESCRIPTIVE REVIEW</span></div>
+        </article>
+
+        <p class="interpretation-note"><span aria-hidden="true">ⓘ</span><span><strong>Interpret with context.</strong> Residual size alone does not establish a bad sensor, a hazardous event, or a future weather condition. Validate unexpected readings against source metadata and domain knowledge.</span></p>
+      </section>
+
+      <section class="page-view" data-view="archive" hidden>
+        <section class="page-intro compact-intro">
+          <div class="intro-copy">
+            <div class="eyebrow"><span class="eyebrow-line"></span>LOCAL PERSISTENCE / 05</div>
+            <h1>Your station<br><span>archive.</span></h1>
+            <p>Keep useful observations in a project-local SQLite database and export a portable CSV copy when you need it.</p>
+          </div>
+        </section>
+
+        <section class="panel archive-explainer">
+          <span class="quick-link-icon">▤</span>
+          <div><h2>Explicit local storage</h2><p>Nothing is saved automatically from the import page. Choose <strong>Save current dataset</strong> to upsert observations by station and timestamp. Repeating a save is designed not to duplicate the same station/time pair.</p></div>
+        </section>
+
+        <section class="panel database-panel archive-database-panel">
+          <div class="database-copy"><div class="db-icon" aria-hidden="true">▤</div><div><div class="section-kicker">PROJECT DATABASE</div><h2>Station archive</h2><p id="database-status">Review or save observations to the project-local SQLite database.</p></div></div>
+          <div class="database-stats"><div><strong id="database-rows">—</strong><span>stored rows</span></div><div><strong id="database-stations">—</strong><span>stations</span></div><div><strong id="database-anomalies">—</strong><span>global outliers</span></div></div>
+          <div class="database-actions"><button id="save-database" class="button button-primary" type="button" disabled>Save current dataset</button><button id="refresh-database" class="button button-secondary" type="button">Refresh archive</button><button id="export-database" class="button button-outline" type="button">Download archive CSV</button></div>
+        </section>
+
+        <div class="archive-note-grid">
+          <article class="panel archive-note"><strong>Database file</strong><p><code>data/weather.db</code> in the project directory.</p></article>
+          <article class="panel archive-note"><strong>Export format</strong><p>CSV with canonical station, timestamp, and measurement columns.</p></article>
+          <article class="panel archive-note"><strong>Data ownership</strong><p>The database is local working data. Back it up or remove it according to your retention needs.</p></article>
         </div>
-        <div class="intro-orbit" aria-hidden="true">
-          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div>
-          <div class="orbit-core"><span>WX</span></div>
-          <span class="orbit-label orbit-label-a">TEMP</span><span class="orbit-label orbit-label-b">RAIN</span><span class="orbit-label orbit-label-c">WIND</span>
-        </div>
-      </section>
-
-      <section class="dataset-banner" aria-live="polite">
-        <div class="dataset-origin"><span class="origin-icon">◈</span><div><strong id="dataset-title">Synthetic station network</strong><span id="dataset-subtitle">Loading reproducible observations…</span></div></div>
-        <div class="dataset-meta"><span><strong id="observations-count">—</strong> observations</span><span class="meta-divider"></span><span><strong id="stations-count">—</strong> stations</span><span class="meta-divider"></span><span id="period-label">—</span></div>
-      </section>
-
-      <section class="kpi-grid" aria-label="Key metrics">
-        <article class="kpi-card kpi-accent">
-          <div class="kpi-head"><span>MEAN OBSERVATION</span><span class="kpi-symbol">μ</span></div>
-          <div class="kpi-value" id="kpi-mean">—</div><div class="kpi-foot" id="kpi-mean-foot">Across selected records</div>
-          <div class="mini-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        </article>
-        <article class="kpi-card">
-          <div class="kpi-head"><span>95TH PERCENTILE</span><span class="kpi-symbol">P95</span></div>
-          <div class="kpi-value" id="kpi-p95">—</div><div class="kpi-foot" id="kpi-range">Range —</div>
-          <div class="kpi-bottom-line"><span id="kpi-count">— valid values</span><span class="small-dot"></span></div>
-        </article>
-        <article class="kpi-card">
-          <div class="kpi-head"><span>TREND DEVIATIONS</span><span class="kpi-symbol warning-symbol">!</span></div>
-          <div class="kpi-value" id="kpi-anomalies">—</div><div class="kpi-foot">Daily points beyond threshold</div>
-          <div class="kpi-bottom-line"><span id="sigma-caption">2.00σ threshold</span><span class="small-dot warning-dot"></span></div>
-        </article>
-        <article class="kpi-card">
-          <div class="kpi-head"><span>RAINFALL RECORDED</span><span class="kpi-symbol rain-symbol">↘</span></div>
-          <div class="kpi-value" id="kpi-rain">—</div><div class="kpi-foot">Total reported precipitation</div>
-          <div class="kpi-bottom-line"><span>Selected dataset</span><span class="small-dot"></span></div>
-        </article>
-      </section>
-
-      <section class="content-grid">
-        <article class="panel chart-panel">
-          <div class="panel-heading">
-            <div><div class="section-kicker">TIME SERIES</div><h2 id="chart-title">Temperature trend</h2><p id="chart-subtitle">Daily values and fitted linear trend</p></div>
-            <span class="chart-legend"><i class="legend-observed"></i>Observed <i class="legend-trend"></i>Trend</span>
-          </div>
-          <div class="chart-canvas" id="chart-canvas" role="img" aria-label="Daily weather metric line chart">
-            <div class="empty-state">Loading chart…</div>
-          </div>
-          <div class="chart-footer"><span id="chart-range">—</span><span>Displaying up to 180 daily buckets</span></div>
-        </article>
-
-        <article id="station-network" class="panel station-panel">
-          <div class="panel-heading">
-            <div><div class="section-kicker">NETWORK DISTRIBUTION</div><h2>Station rollup</h2><p>Coverage and key weather readings</p></div>
-            <span class="panel-index">01 / NET</span>
-          </div>
-          <div class="table-wrap">
-            <table><thead><tr><th>STATION</th><th>MEAN °C</th><th>RAINFALL</th></tr></thead><tbody id="station-table"><tr><td colspan="3">Loading station rollup…</td></tr></tbody></table>
-          </div>
-          <div class="panel-foot"><span id="station-table-foot">—</span><span class="table-foot-mark">● NETWORK</span></div>
-        </article>
-      </section>
-
-      <section id="quality-review" class="content-grid lower-grid">
-        <article class="panel anomaly-panel">
-          <div class="panel-heading">
-            <div><div class="section-kicker">DATA QUALITY / DEVIATIONS</div><h2>Trend deviation review</h2><p>Large residuals from a simple linear trend, not forecast alerts.</p></div>
-            <span class="risk-chip" id="anomaly-chip">Ready to analyze</span>
-          </div>
-          <div class="table-wrap">
-            <table><thead><tr><th>DATE</th><th>OBSERVED</th><th>TREND</th><th>RESIDUAL σ</th></tr></thead><tbody id="anomaly-table"><tr><td colspan="4">Loading quality review…</td></tr></tbody></table>
-          </div>
-          <div class="panel-foot"><span id="anomaly-table-foot">Threshold controlled in the sidebar</span><span class="table-foot-mark">REVIEW</span></div>
-        </article>
-
-        <article class="panel recent-panel">
-          <div class="panel-heading">
-            <div><div class="section-kicker">LATEST RECORDS</div><h2>Recent observations</h2><p>Newest rows in the selected view</p></div>
-            <button id="export-csv" class="icon-button" type="button" title="Export cleaned CSV" aria-label="Export cleaned CSV">↓ CSV</button>
-          </div>
-          <div class="table-wrap recent-table-wrap">
-            <table><thead><tr><th>STATION / TIME</th><th>TEMP</th><th>RAIN</th></tr></thead><tbody id="recent-table"><tr><td colspan="3">Loading records…</td></tr></tbody></table>
-          </div>
-          <div class="panel-foot"><span id="recent-table-foot">—</span><span class="table-foot-mark">RECENT</span></div>
-        </article>
-      </section>
-
-      <section id="local-database" class="panel database-panel">
-        <div class="database-copy"><div class="db-icon" aria-hidden="true">▤</div><div><div class="section-kicker">LOCAL PERSISTENCE</div><h2>Station archive</h2><p id="database-status">Review or save observations to the project-local SQLite database.</p></div></div>
-        <div class="database-stats"><div><strong id="database-rows">—</strong><span>stored rows</span></div><div><strong id="database-stations">—</strong><span>stations</span></div><div><strong id="database-anomalies">—</strong><span>global outliers</span></div></div>
-        <div class="database-actions"><button id="save-database" class="button button-primary" type="button" disabled>Save current dataset</button><button id="refresh-database" class="button button-secondary" type="button">Refresh archive</button><button id="export-database" class="button button-outline" type="button">Download archive CSV</button></div>
       </section>
 
       <footer class="footer">
         <span><strong>WEATHER ATLAS</strong> · Local analytics workspace</span>
-        <span>Synthetic data is fictional · Anomalies are descriptive, not forecasts</span>
+        <span>Synthetic data is fictional · Trend deviations are descriptive, not forecasts</span>
       </footer>
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </main>

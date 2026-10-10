@@ -75,7 +75,12 @@ async def _read_csv_request(request: Request) -> tuple[pd.DataFrame, int]:
 
 
 @app.get("/", include_in_schema=False)
+@app.get("/import", include_in_schema=False)
+@app.get("/network", include_in_schema=False)
+@app.get("/quality", include_in_schema=False)
+@app.get("/archive", include_in_schema=False)
 def index() -> FileResponse:
+    """Serve the same app shell for each direct-linkable workspace page."""
     return FileResponse(WEB / "index.html", media_type="text/html")
 
 
@@ -87,6 +92,11 @@ def styles() -> FileResponse:
 @app.get("/app.js", include_in_schema=False)
 def javascript() -> FileResponse:
     return FileResponse(WEB / "app.js", media_type="text/javascript")
+
+
+@app.get("/assets/weather-atlas-logo.svg", include_in_schema=False)
+def weather_atlas_logo() -> FileResponse:
+    return FileResponse(WEB / "assets" / "weather-atlas-logo.svg", media_type="image/svg+xml")
 
 
 @app.get("/api/health")
