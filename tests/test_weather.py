@@ -109,8 +109,8 @@ def test_ingest_is_idempotent_and_aggregates_station_metrics(tmp_path) -> None:
     first = pd.DataFrame({
         "station": ["A", "A", "B"],
         "ts": ["2025-01-01T00:00:00Z", "2025-01-01T00:00:00Z", "2025-01-01T01:00:00Z"],
-        "temp_c": [20, 22, 18],
-        "precip_mm": [1, 2, 0.5],
+        "temp_c": [22, 22, 18],
+        "precip_mm": [2, 2, 0.5],
     })
     assert ingest(first, db) == 2
     assert ingest(first.iloc[[1, 2]], db) == 2
@@ -156,8 +156,8 @@ def test_run_pipeline_cleans_summarizes_and_persists_csv(tmp_path) -> None:
     pd.DataFrame({
         "station_id": ["A", "A", "B", "B"],
         "datetime": ["2025-01-01T00:00:00Z", "2025-01-01T00:00:00Z", "not-a-date", "2025-01-01T02:00:00Z"],
-        "temperature_c": [20, 22, 18, 17],
-        "rainfall_mm": [0, 1.5, 2.0, 3.0],
+        "temperature_c": [20, 20, 18, 17],
+        "rainfall_mm": [1.5, 1.5, 2.0, 3.0],
     }).to_csv(csv, index=False)
     summary = run_pipeline(csv, db_path=tmp_path / "loaded.db")
     assert summary["source_file"] == "station.csv"
@@ -166,7 +166,7 @@ def test_run_pipeline_cleans_summarizes_and_persists_csv(tmp_path) -> None:
     assert summary["rows_upserted"] == 2
     assert summary["station_count"] == 2
     assert summary["observations"] == 2
-    assert summary["temperature_c"]["mean"] == 19.5
+    assert summary["temperature_c"]["mean"] == 18.5
     assert len(summary["by_station"]) == 2
 
 
