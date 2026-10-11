@@ -246,6 +246,14 @@ tests/
   test_ui_smoke.py               Frontend entry point and asset smoke tests
 ~~~
 
+## Production deployment security
+
+The default launcher binds to loopback. A non-loopback bind such as `python run.py --host 0.0.0.0 --port 8501` requires both `APP_AUTH_USERNAME` and `APP_AUTH_PASSWORD`, supplied through the hosting platform's secret manager (never commit credentials). In this mode HTTP Basic authentication protects the UI, static files, documentation, and API endpoints.
+
+Use a TLS-terminating HTTPS reverse proxy or an equivalent HTTPS gateway before allowing remote access. Basic authentication is a single shared account, not SSO, per-user roles, or an audit trail; sensitive multi-user deployments need an organization identity provider, rate limiting, access logging, backups, and a tested retention policy.
+
+The included station observations are synthetic demo data. This repository is not production weather intelligence until a trusted upstream feed, provider attribution, data-quality monitoring, operational ownership, and archive backup/restore have been configured and validated.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

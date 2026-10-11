@@ -1,14 +1,17 @@
 """Local-first API and static frontend for national weather analytics."""
 from __future__ import annotations
 
+import base64
 import json
+import os
+import secrets
 import sqlite3
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 from fastapi import HTTPException, Query, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 
 from src.weather import (
     MAX_UPLOAD_BYTES,
@@ -28,6 +31,57 @@ WEB = ROOT / "web"
 DB_PATH = ROOT / "data" / "weather.db"
 
 app = create_fastapi_app()
+
+@app.middleware("http")
+async def production_security_middleware(request: Request, call_next):
+    """Apply safe response headers and optional HTTP Basic auth for remote deployments."""
+    username = os.environ.get("APP_AUTH_USERNAME")
+    password = os.environ.get("APP_AUTH_PASSWORD")
+    auth_required = os.environ.get("APP_REQUIRE_AUTH") == "1" or bool(username) or bool(password)
+
+    if auth_required:
+        if not username or not password:
+            return PlainTextResponse(
+                "Authentication is misconfigured; set both APP_AUTH_USERNAME and APP_AUTH_PASSWORD.",
+                status_code=503,
+                headers={"Cache-Control": "no-store"},
+            )
+        authorization = request.headers.get("authorization", "")
+        valid = False
+        scheme, separator, token = authorization.partition(" ")
+        if separator and scheme.lower() == "basic" and token:
+            try:
+                decoded = base64.b64decode(token, validate=True).decode("utf-8")
+                supplied_user, delimiter, supplied_password = decoded.partition(":")
+                valid = bool(delimiter) and secrets.compare_digest(
+                    supplied_user.encode("utf-8"), username.encode("utf-8")
+                ) and secrets.compare_digest(
+                    supplied_password.encode("utf-8"), password.encode("utf-8")
+                )
+            except (ValueError, UnicodeDecodeError):
+                valid = False
+        if not valid:
+            return PlainTextResponse(
+                "Authentication required",
+                status_code=401,
+                headers={
+                    "WWW-Authenticate": 'Basic realm="Weather Atlas", charset="UTF-8"',
+                    "Cache-Control": "no-store",
+                    "X-Content-Type-Options": "nosniff",
+                    "X-Frame-Options": "DENY",
+                    "Referrer-Policy": "no-referrer",
+                    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                },
+            )
+
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
 
 
 def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
