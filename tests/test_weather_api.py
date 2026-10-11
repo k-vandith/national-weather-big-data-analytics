@@ -29,7 +29,7 @@ def request(
 
 CSV_WITH_BAD_ROWS = (
     "station_id,datetime,temperature_c,rainfall_mm,humidity_pct\n"
-    "STN-A,2025-01-01T00:00:00Z,20,1,50\n"
+    "STN-A,2025-01-01T00:00:00Z,21,2,55\n"
     "STN-A,2025-01-01T00:00:00Z,21,2,55\n"
     "STN-B,2025-01-01T01:00:00Z,18,0,70\n"
     "STN-C,not-a-date,22,0,60\n"
