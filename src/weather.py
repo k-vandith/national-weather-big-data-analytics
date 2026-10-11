@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from contextlib import closing
-from io import BytesIO
+from io import BytesIO, StringIO
 from pathlib import Path
 import re
 import sqlite3
@@ -68,7 +68,7 @@ def generate_sample(n: int = 500, seed: int = 42) -> pd.DataFrame:
 def load_weather_csv(upload: bytes | bytearray | Any) -> pd.DataFrame:
     """Read a CSV after enforcing byte and row limits for bytes and file-like inputs."""
     if isinstance(upload, (bytes, bytearray)):
-        raw = bytes(upload)
+        raw: bytes | str = bytes(upload)
     elif hasattr(upload, "read"):
         tell = getattr(upload, "tell", None)
         seek = getattr(upload, "seek", None)
@@ -86,24 +86,17 @@ def load_weather_csv(upload: bytes | bytearray | Any) -> pd.DataFrame:
                     seek(position)
                 except (OSError, ValueError):
                     pass
-        if isinstance(raw, str):
-            if len(raw.encode("utf-8")) > MAX_UPLOAD_BYTES:
-                raise ValueError("CSV upload must be 10 MB or smaller")
-            source = __import__("io").StringIO(raw)
-        elif isinstance(raw, (bytes, bytearray)):
-            source = BytesIO(bytes(raw))
-        else:
+        if not isinstance(raw, (str, bytes, bytearray)):
             raise TypeError("file-like upload must return CSV bytes or text")
     else:
         raise TypeError("upload must be CSV bytes or a file-like object")
 
-    if not hasattr(upload, "read") or isinstance(upload, (bytes, bytearray)):
-        if len(raw) > MAX_UPLOAD_BYTES:
-            raise ValueError("CSV upload must be 10 MB or smaller")
-        source = BytesIO(raw)
-
+    byte_count = len(raw.encode("utf-8")) if isinstance(raw, str) else len(raw)
+    if byte_count > MAX_UPLOAD_BYTES:
+        raise ValueError("CSV upload must be 10 MB or smaller")
     if not raw.strip():
         raise ValueError("CSV contains no observations")
+    source = StringIO(raw) if isinstance(raw, str) else BytesIO(bytes(raw))
     try:
         frame = pd.read_csv(source, nrows=MAX_UPLOAD_ROWS + 1)
     except pd.errors.EmptyDataError as error:
