@@ -236,25 +236,39 @@ def aggregate(db_path: str | Path) -> pd.DataFrame:
 
 
 def _temperature_anomalies(df: pd.DataFrame, z: float = 3.0) -> pd.DataFrame:
+    """Flag within-station temperature outliers, not differences between climates."""
     if not np.isfinite(float(z)) or float(z) <= 0:
         raise ValueError("z must be a positive finite number")
     columns = ["station", "ts", "temp_c", "zscore"]
     if df.empty:
         return pd.DataFrame(columns=columns)
 
-    temp = pd.to_numeric(df["temp_c"], errors="coerce")
-    temp = temp[np.isfinite(temp.to_numpy(dtype=float, na_value=np.nan))]
-    if temp.empty:
-        return pd.DataFrame(columns=columns)
-    sigma = float(temp.std(ddof=0))
-    if not np.isfinite(sigma) or sigma <= 1e-12:
+    working = df.loc[:, ["station", "ts", "temp_c"]].copy()
+    working["temp_c"] = pd.to_numeric(working["temp_c"], errors="coerce")
+    working = working[np.isfinite(working["temp_c"].to_numpy(dtype=float, na_value=np.nan))]
+    if working.empty:
         return pd.DataFrame(columns=columns)
 
-    zscores = (pd.to_numeric(df["temp_c"], errors="coerce") - float(temp.mean())) / sigma
-    mask = zscores.abs() >= float(z)
-    result = df.loc[mask, ["station", "ts", "temp_c"]].copy()
-    result["zscore"] = zscores.loc[mask].astype(float)
-    return result[columns].reset_index(drop=True)
+    results: list[pd.DataFrame] = []
+    for _, group in working.groupby("station", dropna=False, sort=True):
+        # Too few observations or a constant series provides no reliable z-score baseline.
+        if len(group) < 3:
+            continue
+        values = group["temp_c"].astype(float)
+        sigma = float(values.std(ddof=0))
+        if not np.isfinite(sigma) or sigma <= 1e-12:
+            continue
+        zscores = (values - float(values.mean())) / sigma
+        mask = zscores.abs() >= float(z)
+        if not mask.any():
+            continue
+        selected = group.loc[mask, ["station", "ts", "temp_c"]].copy()
+        selected["zscore"] = zscores.loc[mask].astype(float)
+        results.append(selected[columns])
+
+    if not results:
+        return pd.DataFrame(columns=columns)
+    return pd.concat(results, ignore_index=True)[columns]
 
 
 def anomalies(db_path: str | Path, z: float = 3.0) -> pd.DataFrame:
