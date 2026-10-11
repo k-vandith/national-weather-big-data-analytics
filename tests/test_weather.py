@@ -198,3 +198,18 @@ def test_aggregate_preserves_missing_precip_but_keeps_measured_zero(tmp_path):
 
     assert pd.isna(rollup.loc["NO-RAIN-DATA", "total_precip"])
     assert rollup.loc["DRY", "total_precip"] == 0.0
+
+
+
+def test_temperature_anomalies_compare_each_station_to_its_own_baseline(tmp_path):
+    db = tmp_path / "station-baselines.db"
+    records = []
+    for index in range(3):
+        records.append({"station": "COLD", "ts": f"2025-01-01T0{index}:00:00Z", "temp_c": 0.0})
+    for index in range(100):
+        records.append({"station": "WARM", "ts": f"2025-01-{1 + index // 24:02d}T{index % 24:02d}:00:00Z", "temp_c": 30.0})
+
+    ingest(pd.DataFrame(records), db)
+    result = anomalies(db, z=2.0)
+
+    assert result.empty
