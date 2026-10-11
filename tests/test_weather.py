@@ -177,3 +177,24 @@ def test_run_pipeline_missing_file_and_invalid_csv(tmp_path) -> None:
     pd.DataFrame({"station": ["A"], "humidity": [50]}).to_csv(csv, index=False)
     with pytest.raises(ValueError, match="Missing required"):
         run_pipeline(csv)
+
+
+
+def test_aggregate_preserves_missing_precip_but_keeps_measured_zero(tmp_path):
+    db = tmp_path / "precipitation.db"
+    frame = pd.DataFrame({
+        "station": ["NO-RAIN-DATA", "NO-RAIN-DATA", "DRY"],
+        "ts": [
+            "2025-01-01T00:00:00Z",
+            "2025-01-01T01:00:00Z",
+            "2025-01-01T00:00:00Z",
+        ],
+        "temp_c": [10, 11, 12],
+        "precip_mm": [float("nan"), float("nan"), 0.0],
+    })
+
+    ingest(frame, db)
+    rollup = aggregate(db).set_index("station")
+
+    assert pd.isna(rollup.loc["NO-RAIN-DATA", "total_precip"])
+    assert rollup.loc["DRY", "total_precip"] == 0.0
