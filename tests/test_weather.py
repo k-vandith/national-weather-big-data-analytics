@@ -32,14 +32,14 @@ def test_generate_sample_rejects_invalid_size(n: object) -> None:
         generate_sample(n=n)  # type: ignore[arg-type]
 
 
-def test_normalize_aliases_filters_bad_required_rows_and_deduplicates() -> None:
+def test_normalize_aliases_filters_bad_required_rows_and_deduplicates_identical_rows() -> None:
     raw = pd.DataFrame({
         "station_id": [" STN-1 ", "STN-1", "STN-2", ""],
         "datetime": ["2025-01-01 00:00", "2025-01-01 00:00", "2025-01-01 01:00", "2025-01-01 02:00"],
-        "temperature_c": [20, 22, 150, 18],
-        "rainfall_mm": [1, 2, 3, 4],
-        "humidity_pct": [50, 120, 60, 70],
-        "wind_speed_ms": [3, 4, -1, 5],
+        "temperature_c": [22, 22, 150, 18],
+        "rainfall_mm": [2, 2, 3, 4],
+        "humidity_pct": [120, 120, 60, 70],
+        "wind_speed_ms": [4, 4, -1, 5],
     })
     clean = normalize_observations(raw)
     assert len(clean) == 1
@@ -213,3 +213,16 @@ def test_temperature_anomalies_compare_each_station_to_its_own_baseline(tmp_path
     result = anomalies(db, z=2.0)
 
     assert result.empty
+
+
+
+def test_conflicting_duplicate_station_timestamp_is_rejected() -> None:
+    raw = pd.DataFrame({
+        "station": ["STN-1", "STN-1"],
+        "ts": ["2025-01-01T00:00:00Z", "2025-01-01T00:00:00Z"],
+        "temp_c": [20.0, 24.0],
+        "precip_mm": [1.0, 3.0],
+    })
+
+    with pytest.raises(ValueError, match="Conflicting observations share a station/timestamp key"):
+        normalize_observations(raw)
