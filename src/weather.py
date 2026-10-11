@@ -225,7 +225,7 @@ def aggregate(db_path: str | Path) -> pd.DataFrame:
     query = """
         SELECT station,
                AVG(temp_c) AS avg_temp,
-               COALESCE(SUM(precip_mm), 0.0) AS total_precip,
+               SUM(precip_mm) AS total_precip,
                COUNT(*) AS n
         FROM observations
         GROUP BY station
