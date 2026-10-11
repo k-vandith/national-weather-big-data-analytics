@@ -10,8 +10,8 @@ const METRICS = {
 };
 const state = {
   rows: [],
-  source: "synthetic-network",
-  sourceLabel: "Synthetic station network",
+  source: "no-data",
+  sourceLabel: "No dataset loaded",
   rowsRead: null,
   rowsRemoved: 0,
   sigma: 2,
@@ -83,7 +83,7 @@ function setBusy(isBusy, message = "") {
   byId("save-database").disabled = isBusy || state.rows.length === 0;
   byId("refresh-database").disabled = isBusy;
   byId("export-csv").disabled = isBusy || state.rows.length === 0;
-  byId("source-badge").textContent = message || (isBusy ? "Working…" : (state.source === "uploaded-csv" ? "Uploaded CSV" : "Demo source"));
+  byId("source-badge").textContent = message || (isBusy ? "Working…" : (state.source === "uploaded-csv" ? "Uploaded CSV" : state.source === "synthetic-network" ? "Demo source" : "No data loaded"));
   document.body.classList.toggle("is-busy", isBusy);
 }
 
@@ -122,7 +122,7 @@ function setDataset(payload) {
   state.source = payload.source || "unknown";
   state.sourceLabel = state.source === "uploaded-csv"
     ? "Uploaded station CSV"
-    : state.source === "synthetic-network" ? "Synthetic station network" : state.source;
+    : state.source === "synthetic-network" ? "Synthetic station network" : "No dataset loaded";
   state.rowsRead = payload.rows_read ?? state.rows.length;
   state.rowsRemoved = payload.rows_removed ?? 0;
   const selector = byId("station-select");
@@ -136,7 +136,9 @@ function setDataset(payload) {
   byId("dataset-title").textContent = state.sourceLabel;
   byId("dataset-subtitle").textContent = state.source === "uploaded-csv"
     ? `${pretty(state.rowsRemoved, 0)} rows excluded during cleaning · local processing only`
-    : "Reproducible synthetic observations · no live weather feed";
+    : state.source === "synthetic-network"
+      ? "Reproducible synthetic observations · not a live weather feed"
+      : "Upload a station CSV or explicitly load the labelled demo dataset.";
   byId("import-source-title").textContent = state.sourceLabel;
   byId("import-source-meta").textContent = `${pretty(state.rows.length, 0)} valid rows · ${pretty(state.rowsRemoved, 0)} excluded during cleaning · ${new Set(state.rows.map((row) => row.station)).size} station(s)`;
   renderDashboard();
@@ -540,7 +542,17 @@ async function boot() {
     toast("The local API is not reachable. Start the app with python run.py.", "error");
     return;
   }
-  await loadSample();
+  // Do not silently preload sample values into a real-data analytics workspace.
+  // The demo remains available via the explicit "Load demo" control.
+  byId("dataset-title").textContent = "No dataset loaded";
+  byId("dataset-subtitle").textContent = "Upload a station CSV or explicitly load the labelled demo dataset.";
+  byId("import-source-title").textContent = "No dataset loaded";
+  byId("import-source-meta").textContent = "Choose a CSV or click Load demo to use synthetic observations.";
+  byId("source-badge").textContent = "No data loaded";
+  byId("observations-count").textContent = "0";
+  byId("stations-count").textContent = "0";
+  byId("period-label").textContent = "No time span";
+  setBusy(false);
   await refreshDatabase();
 }
 
