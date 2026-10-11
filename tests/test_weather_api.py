@@ -29,7 +29,7 @@ def request(
 
 CSV_WITH_BAD_ROWS = (
     "station_id,datetime,temperature_c,rainfall_mm,humidity_pct\n"
-    "STN-A,2025-01-01T00:00:00Z,20,1,50\n"
+    "STN-A,2025-01-01T00:00:00Z,21,2,55\n"
     "STN-A,2025-01-01T00:00:00Z,21,2,55\n"
     "STN-B,2025-01-01T01:00:00Z,18,0,70\n"
     "STN-C,not-a-date,22,0,60\n"
@@ -175,3 +175,16 @@ def test_archive_csv_neutralizes_formula_like_station_values(monkeypatch: pytest
 
     assert exported.status_code == 200
     assert "'=1+1" in exported.text
+
+
+
+def test_csv_analysis_rejects_conflicting_duplicate_station_timestamps() -> None:
+    csv = (
+        "station,ts,temp_c,precip_mm\n"
+        "STN-A,2025-01-01T00:00:00Z,20,1\n"
+        "STN-A,2025-01-01T00:00:00Z,21,2\n"
+    ).encode("utf-8")
+    response = request("POST", "/api/analyze/csv", content=csv, headers={"Content-Type": "text/csv"})
+
+    assert response.status_code == 422
+    assert "Conflicting observations share a station/timestamp key" in response.json()["detail"]

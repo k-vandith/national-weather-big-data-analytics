@@ -74,7 +74,7 @@ The interactive API documentation is available at **http://127.0.0.1:8501/docs**
 
 ## Try it in five steps
 
-1. Open **Import data** and load the reproducible demo dataset, or choose a station CSV and select **Analyze CSV**.
+1. The workspace starts with no dataset loaded. In **Import data**, explicitly choose the reproducible demo dataset or choose a station CSV and select **Analyze CSV**.
 2. Visit **Overview** to see the dataset summary and daily trend chart. Use the metric selector in the top bar to change the displayed weather measurement.
 3. Open **Station network** to compare station coverage and review the newest observations. The station filter updates the displayed station-specific summary.
 4. Go to **Quality review** to adjust the residual threshold and inspect daily deviations. A “No deviations” result means no daily point crossed that threshold; it does not guarantee that every source record is correct.
