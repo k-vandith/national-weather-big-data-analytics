@@ -158,3 +158,20 @@ def test_compatibility_api_routes() -> None:
     assert response.json()["station_count"] == 2
 
     assert request("POST", "/analytics/summary", {"observations": []}).status_code == 422
+
+
+
+def test_archive_csv_neutralizes_formula_like_station_values(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(api_module, "DB_PATH", tmp_path / "formula.db")
+    csv = (
+        "station,ts,temp_c,precip_mm\n"
+        "=1+1,2025-01-01T00:00:00Z,20,1\n"
+    ).encode("utf-8")
+
+    uploaded = request("POST", "/api/ingest/csv", content=csv, headers={"Content-Type": "text/csv"})
+    assert uploaded.status_code == 200
+
+    exported = request("GET", "/api/stored.csv")
+
+    assert exported.status_code == 200
+    assert "'=1+1" in exported.text

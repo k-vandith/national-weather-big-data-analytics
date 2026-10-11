@@ -18,6 +18,7 @@ from src.weather import (
     ingest,
     load_weather_csv,
     normalize_observations,
+    observations_to_csv,
     summarize_observations,
 )
 from src.weather_features import create_fastapi_app
@@ -169,7 +170,7 @@ def api_stored_csv() -> Response:
             connection,
         )
     return Response(
-        content=frame.to_csv(index=False),
+        content=observations_to_csv(frame, index=False),
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="weather-database.csv"'},
     )

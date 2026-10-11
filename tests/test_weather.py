@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import sqlite3
 
 import pandas as pd
@@ -67,6 +68,40 @@ def test_load_weather_csv_and_size_limit() -> None:
     assert list(frame.columns) == ["station_id", "timestamp", "temperature_c"]
     with pytest.raises(ValueError, match="10 MB"):
         load_weather_csv(b"x" * (MAX_UPLOAD_BYTES + 1))
+
+
+def test_file_like_csv_enforces_byte_limit_and_restores_cursor() -> None:
+    oversized = io.BytesIO(b"x" * (MAX_UPLOAD_BYTES + 1))
+    with pytest.raises(ValueError, match="10 MB"):
+        load_weather_csv(oversized)
+    assert oversized.tell() == 0
+
+
+def test_csv_loader_enforces_row_limit_before_unbounded_parse() -> None:
+    payload = ("station,ts,temp_c\n" + "A,2025-01-01,20\n" * 100_001).encode("ascii")
+    with pytest.raises(ValueError, match="100000 rows"):
+        load_weather_csv(payload)
+
+
+def test_csv_loader_normalizes_empty_file_exception() -> None:
+    with pytest.raises(ValueError, match="no observations"):
+        load_weather_csv(b"")
+
+
+def test_station_precipitation_is_null_when_no_measurements_exist() -> None:
+    from src.weather import summarize_observations
+
+    frame = pd.DataFrame({
+        "station": ["A", "A", "B"],
+        "ts": ["2025-01-01T00:00:00Z", "2025-01-01T01:00:00Z", "2025-01-01T00:00:00Z"],
+        "temp_c": [10, 11, 12],
+        "precip_mm": [float("nan"), float("nan"), float("nan")],
+    })
+
+    summary = summarize_observations(frame)
+
+    assert summary["total_precip_mm"] is None
+    assert {item["station"]: item["total_precip_mm"] for item in summary["by_station"]} == {"A": None, "B": None}
 
 
 def test_ingest_is_idempotent_and_aggregates_station_metrics(tmp_path) -> None:
