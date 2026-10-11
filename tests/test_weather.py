@@ -78,7 +78,7 @@ def test_file_like_csv_enforces_byte_limit_and_restores_cursor() -> None:
 
 
 def test_csv_loader_enforces_row_limit_before_unbounded_parse() -> None:
-    payload = ("station,ts,temp_c\\n" + "A,2025-01-01,20\\n" * 100_001).encode("ascii")
+    payload = ("station,ts,temp_c\n" + "A,2025-01-01,20\n" * 100_001).encode("ascii")
     with pytest.raises(ValueError, match="100000 rows"):
         load_weather_csv(payload)
 
