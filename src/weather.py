@@ -282,7 +282,7 @@ def summarize_observations(df: pd.DataFrame) -> dict[str, Any]:
             mean_temp_c=("temp_c", "mean"),
             min_temp_c=("temp_c", "min"),
             max_temp_c=("temp_c", "max"),
-            total_precip_mm=("precip_mm", "sum"),
+            total_precip_mm=("precip_mm", lambda values: values.sum(min_count=1)),
         )
         .sort_values("station")
     )
@@ -313,14 +313,40 @@ def summarize_observations(df: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def _spreadsheet_safe_value(value: Any) -> Any:
+    """Neutralize formula-like strings before a CSV is opened in spreadsheet software."""
+    if not isinstance(value, str):
+        return value
+    stripped = value.lstrip(" \t\r\n")
+    if value.startswith(("\t", "\r", "\n")) or (stripped and stripped[0] in "=+-@"):
+        return "'" + value
+    return value
+
+
+def observations_to_csv(frame: pd.DataFrame, *, index: bool = False) -> str:
+    """Serialize a copy of a frame with untrusted string cells made spreadsheet-safe."""
+    safe = frame.copy()
+    for column in safe.columns:
+        if pd.api.types.is_object_dtype(safe[column].dtype) or pd.api.types.is_string_dtype(safe[column].dtype):
+            safe[column] = safe[column].map(_spreadsheet_safe_value)
+    return safe.to_csv(index=index)
+
+
 def run_pipeline(csv_path: str | Path, db_path: str | Path | None = None) -> dict[str, Any]:
     """Read, clean, summarize, and optionally persist a station CSV batch."""
     source = Path(csv_path)
     if not source.is_file():
         raise FileNotFoundError(f"Weather CSV not found: {source}")
-    raw = pd.read_csv(source)
+    if source.stat().st_size > MAX_UPLOAD_BYTES:
+        raise ValueError("CSV upload must be 10 MB or smaller")
+    try:
+        raw = pd.read_csv(source, nrows=MAX_UPLOAD_ROWS + 1)
+    except pd.errors.EmptyDataError as error:
+        raise ValueError("CSV contains no observations") from error
     if len(raw) > MAX_UPLOAD_ROWS:
         raise ValueError("CSV must contain 100000 rows or fewer")
+    if raw.empty:
+        raise ValueError("CSV contains no observations")
     clean = normalize_observations(raw)
     summary = summarize_observations(clean)
     summary["source_file"] = source.name
