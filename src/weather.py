@@ -166,7 +166,19 @@ def normalize_observations(df: pd.DataFrame) -> pd.DataFrame:
             clean[column] = values.where(values.between(lower, upper, inclusive="both"))
 
     clean = clean[CANONICAL_COLUMNS]
-    clean = clean.drop_duplicates(subset=["station", "ts"], keep="last")
+    duplicate_rows = clean.loc[clean.duplicated(["station", "ts"], keep=False)]
+    if not duplicate_rows.empty:
+        value_columns = [column for column in CANONICAL_COLUMNS if column not in {"station", "ts"}]
+        conflict_mask = duplicate_rows.groupby(["station", "ts"], dropna=False)[value_columns].nunique(dropna=False).gt(1).any(axis=1)
+        if conflict_mask.any():
+            examples = [f"{station} @ {timestamp}" for station, timestamp in conflict_mask[conflict_mask].index[:3]]
+            raise ValueError(
+                "Conflicting observations share a station/timestamp key: "
+                + ", ".join(examples)
+                + ". Correct the source rows before analysis."
+            )
+    clean = clean.drop_duplicates(subset=CANONICAL_COLUMNS, keep="first")
+    clean = clean.drop_duplicates(subset=["station", "ts"], keep="first")
     return clean.reset_index(drop=True)
 
 
