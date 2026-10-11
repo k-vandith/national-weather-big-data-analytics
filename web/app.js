@@ -395,7 +395,8 @@ function renderDashboard() {
 
 function csvCell(value, stringColumn = false) {
   let content = value === null || value === undefined ? "" : String(value);
-  if (stringColumn && /^[=+@\-]/.test(content)) content = "'" + content;
+  const trimmed = content.replace(/^[ \\t\\r\\n]+/, "");
+  if (stringColumn && (/^[\\t\\r\\n]/.test(content) || /^[=+@\\-]/.test(trimmed))) content = "'" + content;
   return '"' + content.replace(/"/g, '""') + '"';
 }
 
